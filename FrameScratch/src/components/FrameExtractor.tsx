@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { ScratchBlock, ScratchStack } from "./ScratchBlock";
+import { HatBlock, CommandBlock, ForeverWrap, ScratchStack } from "./ScratchBlock";
 
 export default function FrameExtractor() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -122,7 +122,7 @@ export default function FrameExtractor() {
           {duration > 0 && (
             <div>
               <label className="block text-sm font-medium mb-2">
-                2. Trim range ({fmt(trimStart)} – {fmt(trimEnd)})
+                2. Trim range ({fmt(trimStart)} - {fmt(trimEnd)})
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -206,7 +206,7 @@ export default function FrameExtractor() {
             disabled={!file || extracting}
             className="bg-orange-500 hover:bg-orange-600 transition-colors text-white font-medium px-5 py-2.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed w-fit"
           >
-            {extracting ? `Extracting… ${progress}%` : "Extract Frames"}
+            {extracting ? `Extracting... ${progress}%` : "Extract Frames"}
           </button>
 
           {extracting && (
@@ -249,14 +249,15 @@ export default function FrameExtractor() {
             <h2 className="font-semibold mb-1">Build these blocks in Scratch</h2>
             <p className="text-sm text-slate-500 mb-4">
               Create a new sprite, import all {frames.length} images from the zip into its
-              Costumes tab (they&apos;ll auto-sort as a01, a02…), then stack these blocks:
+              Costumes tab (they&apos;ll auto-sort as a01, a02...), then stack these blocks:
             </p>
             <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
               <ScratchStack>
-                <ScratchBlock color="orange">when 🏁 clicked</ScratchBlock>
-                <ScratchBlock color="orange">forever</ScratchBlock>
-                <ScratchBlock color="purple">next costume</ScratchBlock>
-                <ScratchBlock color="purple">wait {waitTime} seconds</ScratchBlock>
+                <HatBlock delay={0}>when clicked</HatBlock>
+                <ForeverWrap delay={250}>
+                  <CommandBlock color="purple" animate={false}>next costume</CommandBlock>
+                  <CommandBlock color="purple" animate={false}>wait {waitTime} seconds</CommandBlock>
+                </ForeverWrap>
               </ScratchStack>
             </div>
           </div>
