@@ -5,6 +5,8 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { HatBlock, CommandBlock, ForeverWrap, ScratchStack } from "./ScratchBlock";
 
+const MAX_RECOMMENDED_FRAMES = 400;
+
 export default function FrameExtractor() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,17 +16,22 @@ export default function FrameExtractor() {
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
   const [scale, setScale] = useState(100);
-  const [format, setFormat] = useState<"png" | "jpeg">("png");
+  const [format, setFormat] = useState<"png" | "jpeg">("jpeg");
   const [quality, setQuality] = useState(85);
   const [progress, setProgress] = useState(0);
   const [frames, setFrames] = useState<string[]>([]);
+  const [frameBlobs, setFrameBlobs] = useState<Blob[]>([]);
   const [extracting, setExtracting] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [zipping, setZipping] = useState(false);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     setFile(f);
     setFrames([]);
+    setFrameBlobs([]);
+    setWarning(null);
     if (videoRef.current) {
       videoRef.current.src = URL.createObjectURL(f);
       videoRef.current.onloadedmetadata = () => {
@@ -36,12 +43,32 @@ export default function FrameExtractor() {
     }
   };
 
+  const estimatedFrameCount = () => {
+    const start = Math.max(0, trimStart);
+    const end = Math.min(duration, trimEnd || duration);
+    const clipLength = Math.max(0, end - start);
+    return Math.floor(clipLength / (1 / fps));
+  };
+
   const extractFrames = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
+
+    const estimated = estimatedFrameCount();
+    if (estimated > MAX_RECOMMENDED_FRAMES) {
+      const proceed = window.confirm(
+        `This will extract ${estimated} frames, which may be slow or crash your browser tab depending on your device. Consider lowering FPS or trimming a shorter range.\n\nContinue anyway?`
+      );
+      if (!proceed) return;
+    }
+
+    // revoke any previous object URLs to free memory before starting a new extraction
+    frames.forEach((url) => URL.revokeObjectURL(url));
+
     setExtracting(true);
     setProgress(0);
+    setWarning(null);
 
     await new Promise((res) => {
       if (video.readyState >= 1) res(null);
@@ -63,7 +90,8 @@ export default function FrameExtractor() {
     const mime = format === "png" ? "image/png" : "image/jpeg";
     const q = format === "jpeg" ? quality / 100 : undefined;
 
-    const captured: string[] = [];
+    const capturedUrls: string[] = [];
+    const capturedBlobs: Blob[] = [];
 
     for (let i = 0; i < totalFrames; i++) {
       const t = start + i * interval;
@@ -72,24 +100,52 @@ export default function FrameExtractor() {
         video.onseeked = () => res(null);
       });
       ctx.drawImage(video, 0, 0, scaledW, scaledH);
-      captured.push(canvas.toDataURL(mime, q));
+
+      const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob(resolve, mime, q)
+      );
+      if (blob) {
+        capturedBlobs.push(blob);
+        capturedUrls.push(URL.createObjectURL(blob));
+      }
       setProgress(Math.round(((i + 1) / totalFrames) * 100));
     }
 
-    setFrames(captured);
+    setFrames(capturedUrls);
+    setFrameBlobs(capturedBlobs);
     setExtracting(false);
+
+    if (totalFrames > MAX_RECOMMENDED_FRAMES) {
+      setWarning(
+        `Extracted ${totalFrames} frames. Large costume packs can be slow to zip, download, and later import into Scratch. Consider PNG → JPEG or a lower FPS if you run into issues.`
+      );
+    }
   };
 
   const downloadZip = async () => {
-    const zip = new JSZip();
-    const ext = format === "png" ? "png" : "jpg";
-    frames.forEach((dataUrl, i) => {
-      const name = `a${String(i + 1).padStart(2, "0")}`;
-      const base64 = dataUrl.split(",")[1];
-      zip.file(`${name}.${ext}`, base64, { base64: true });
-    });
-    const blob = await zip.generateAsync({ type: "blob" });
-    saveAs(blob, "costumes.zip");
+    setZipping(true);
+    try {
+      const zip = new JSZip();
+      const ext = format === "png" ? "png" : "jpg";
+      frameBlobs.forEach((blob, i) => {
+        const name = `a${String(i + 1).padStart(2, "0")}`;
+        zip.file(`${name}.${ext}`, blob);
+      });
+      const blob = await zip.generateAsync(
+        { type: "blob", compression: "STORE" },
+        () => {
+          // progress callback available here if you want a zip progress bar later
+        }
+      );
+      saveAs(blob, "costumes.zip");
+    } catch (err) {
+      alert(
+        "The zip failed to generate, likely because there isn't enough memory available for this many/large frames. Try lowering resolution, using JPEG, or extracting fewer frames."
+      );
+      console.error(err);
+    } finally {
+      setZipping(false);
+    }
   };
 
   const waitTime = (1 / fps).toFixed(4);
@@ -181,8 +237,8 @@ export default function FrameExtractor() {
                 onChange={(e) => setFormat(e.target.value as "png" | "jpeg")}
                 className="border border-slate-300 rounded-lg px-3 py-1.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               >
-                <option value="png">PNG (lossless, larger)</option>
-                <option value="jpeg">JPEG (compressed, smaller)</option>
+                <option value="jpeg">JPEG (compressed, smaller, recommended)</option>
+                <option value="png">PNG (lossless, much larger)</option>
               </select>
             </div>
           </div>
@@ -199,6 +255,13 @@ export default function FrameExtractor() {
                 className="w-full max-w-xs accent-orange-500"
               />
             </div>
+          )}
+
+          {duration > 0 && estimatedFrameCount() > MAX_RECOMMENDED_FRAMES && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              This will extract about {estimatedFrameCount()} frames. That may be slow or crash
+              the tab on lower-memory devices - consider lowering FPS or trimming a shorter range.
+            </p>
           )}
 
           <button
@@ -222,14 +285,21 @@ export default function FrameExtractor() {
 
       {frames.length > 0 && (
         <div className="mt-8 flex flex-col gap-6">
+          {warning && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              {warning}
+            </p>
+          )}
+
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold">{frames.length} frames extracted</h2>
               <button
                 onClick={downloadZip}
-                className="bg-emerald-600 hover:bg-emerald-700 transition-colors text-white font-medium px-4 py-2 rounded-lg text-sm"
+                disabled={zipping}
+                className="bg-emerald-600 hover:bg-emerald-700 transition-colors text-white font-medium px-4 py-2 rounded-lg text-sm disabled:opacity-50"
               >
-                Download costumes.zip
+                {zipping ? "Zipping..." : "Download costumes.zip"}
               </button>
             </div>
             <div className="grid grid-cols-8 gap-2 max-h-56 overflow-y-auto">
