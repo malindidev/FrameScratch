@@ -6,7 +6,7 @@ Upload a video, trim and adjust it, and download a ZIP of frames ready to import
 
 **Repo:** https://github.com/malindidev/FrameScratch
 
-**Live:** https://framescratch.bbnerds.com
+**Live:** https://frame.bbnerds.com
 
 ## Features
 
