@@ -15,7 +15,10 @@ export function Hero() {
           FrameScratch splits a clip into frame-by-frame images, packages them for
           Scratch&apos;s costume importer, and shows you the exact blocks to animate it.
         </p>
-        <a href="#tool" className="inline-block mt-8 bg-orange-500 hover:bg-orange-600 transition-colors text-white font-medium px-6 py-3 rounded-lg">
+        <a
+          href="#tool"
+          className="inline-block mt-8 bg-orange-500 hover:bg-orange-600 transition-colors text-white font-medium px-6 py-3 rounded-lg"
+        >
           Start extracting frames
         </a>
       </div>
@@ -30,7 +33,7 @@ const features = [
   },
   {
     title: "Trim before you extract",
-    body: "Set a start and end point so you only extract the part of the clip you actually need.",
+    body: "Drag a start and end handle so you only extract the part of the clip you actually need.",
   },
   {
     title: "Control size & format",
@@ -38,7 +41,15 @@ const features = [
   },
   {
     title: "Ready-made blocks",
-    body: "We calculate the exact wait time for your chosen frame rate and show you the block stack to paste into Scratch.",
+    body: "We calculate the exact wait time for your chosen frame rate and show you the block stack to build in Scratch.",
+  },
+  {
+    title: "Audio extraction",
+    body: "Pull the soundtrack out as a Scratch-friendly WAV and get the matching sound block added to your stack.",
+  },
+  {
+    title: "Sprite sheet mode",
+    body: "Export every frame as one sprite sheet with a JSON file, ready for game engines and other tools.",
   },
 ];
 
@@ -49,8 +60,11 @@ export function Features() {
       <div className="grid sm:grid-cols-2 gap-5">
         {features.map((f, i) => (
           <Reveal key={f.title} delay={i * 80}>
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-              <h3 className="font-medium mb-1.5">{f.title}</h3>
+            <div className="group h-full bg-white border border-slate-200 rounded-xl p-5 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:border-orange-300">
+              <div className="w-8 h-1 rounded-full bg-orange-200 mb-3 transition-all duration-300 group-hover:w-14 group-hover:bg-orange-500" />
+              <h3 className="font-medium mb-1.5 transition-colors duration-300 group-hover:text-orange-600">
+                {f.title}
+              </h3>
               <p className="text-sm text-slate-500">{f.body}</p>
             </div>
           </Reveal>
@@ -62,9 +76,9 @@ export function Features() {
 
 const steps = [
   { n: "1", t: "Upload a clip", d: "Any common video format your browser can play." },
-  { n: "2", t: "Set your options", d: "Trim range, frame rate, resolution, and format." },
-  { n: "3", t: "Extract & download", d: "Get a ZIP of numbered PNG/JPEG frames." },
-  { n: "4", t: "Import to Scratch", d: "Bulk-upload the images as costumes, then add the blocks shown." },
+  { n: "2", t: "Set your options", d: "Trim range, frame rate, resolution, format, and audio." },
+  { n: "3", t: "Extract & download", d: "Get a ZIP of numbered frames or a single sprite sheet." },
+  { n: "4", t: "Import to Scratch", d: "Upload the images as costumes, then build the blocks shown." },
 ];
 
 export function HowItWorks() {
@@ -75,8 +89,8 @@ export function HowItWorks() {
         <div className="grid sm:grid-cols-4 gap-6">
           {steps.map((s, i) => (
             <Reveal key={s.n} delay={i * 100}>
-              <div className="text-center">
-                <div className="w-8 h-8 rounded-full bg-orange-500 text-white text-sm font-semibold flex items-center justify-center mx-auto mb-3">
+              <div className="group text-center">
+                <div className="w-8 h-8 rounded-full bg-orange-500 text-white text-sm font-semibold flex items-center justify-center mx-auto mb-3 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-6">
                   {s.n}
                 </div>
                 <h3 className="font-medium text-sm mb-1">{s.t}</h3>

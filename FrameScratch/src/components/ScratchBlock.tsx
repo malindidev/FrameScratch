@@ -2,11 +2,12 @@
 
 import { ReactNode, useEffect, useState } from "react";
 
-type BlockColor = "orange" | "purple";
+type BlockColor = "orange" | "purple" | "pink";
 
 const colorMap: Record<BlockColor, { base: string; dark: string }> = {
   orange: { base: "#FFAB19", dark: "#CF8B17" },
   purple: { base: "#9966FF", dark: "#774DCB" },
+  pink: { base: "#CF63CF", dark: "#BD42BD" },
 };
 
 function useDelayedVisible(delay: number, animate: boolean) {
